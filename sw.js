@@ -1,7 +1,7 @@
 /* Study Den offline shell. Network first with a cache fallback, so the
    page is always fresh online and still opens with no connection. */
-var CACHE = 'study-den-v2819603762';
-var SHELL = ['./', './index.html', './manifest.webmanifest',
+var CACHE = 'study-den-v2136352378';
+var SHELL = ['./', './index.html', './manifest.webmanifest', './firebase-config.js',
              './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function(e){

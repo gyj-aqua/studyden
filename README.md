@@ -19,6 +19,15 @@ Two copies, same app:
 Move progress between them with **Download backup** / **Restore from a backup**
 in the World tab.
 
+## Sync on the hosted copy
+
+Fill in `firebase-config.js` with a Firebase web app config and the World tab
+grows a **Sign in with Google** button. Signed in, the den lives in Firestore
+under `users/<uid>/den/profile` and follows you to any device you sign in on;
+signed out, nothing changes and the den stays on the device. Paste
+`firestore.rules` into the Firestore rules tab, and add the site's domain under
+Authentication -> Settings -> Authorized domains.
+
 ## Layout
 
 GitHub Pages serves this repository from the root of `main`, so `index.html`
@@ -31,6 +40,8 @@ works whether it is served from a root domain or from a `/studyden/` prefix.
 | `index.html` | the hosted copy — the source wrapped in that skeleton, plus the manifest, icons and service worker |
 | `study-den-offline.html` | the same app as one self-contained file you can open straight from disk |
 | `sw.js` | caches the app so it opens with no connection; network first, so it refreshes as soon as you are online |
+| `firebase-config.js` | the Firebase project the hosted copy signs into. Empty means no sign-in: the den is kept on the device |
+| `firestore.rules` | the rule to paste into Firestore — each signed-in account reads and writes only its own den |
 | `build-site.py` | rebuilds `index.html` and `study-den-offline.html` from the source |
 | `art/` | the eighteen companions, cut out of the reference sheets as transparent PNGs — the source of truth for the artwork |
 | `inline-art.py` | rebuilds the `ART` block in `study-den.html` from `art/`, so the images travel inside the page |

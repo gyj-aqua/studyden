@@ -53,8 +53,12 @@ if('serviceWorker' in navigator){
 '''
 
 # ---- hosted copy -----------------------------------------------------------
+# firebase-config.js carries the project settings for Google sign-in. It must
+# load before the app, and it is only in the hosted copy: the artifact already
+# saves to the Claude account, and a file:// page cannot sign in at all.
+FB = '<script src="firebase-config.js"></script>\n'
 io.open(os.path.join(SITE, 'index.html'), 'w', encoding='utf-8').write(
-    HEAD.replace('__EXTRA__', PWA_HEAD) + body + SW_REG + '\n</body>\n</html>\n')
+    HEAD.replace('__EXTRA__', PWA_HEAD) + FB + body + SW_REG + '\n</body>\n</html>\n')
 
 # ---- single-file copy ------------------------------------------------------
 io.open(os.path.join(HERE, 'study-den-offline.html'), 'w', encoding='utf-8').write(
@@ -84,7 +88,7 @@ io.open(os.path.join(SITE, 'manifest.webmanifest'), 'w', encoding='utf-8').write
 SW = '''/* Study Den offline shell. Network first with a cache fallback, so the
    page is always fresh online and still opens with no connection. */
 var CACHE = 'study-den-v__V__';
-var SHELL = ['./', './index.html', './manifest.webmanifest',
+var SHELL = ['./', './index.html', './manifest.webmanifest', './firebase-config.js',
              './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function(e){

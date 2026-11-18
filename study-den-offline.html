@@ -450,6 +450,14 @@ document.documentElement.dataset.denWorld=(w0==="snow"||w0==="space")?w0:"ocean"
         <input type="file" id="restoreFile" accept="application/json,.json" hidden>
       </div>
     </div>
+    <div class="card" id="accountCard" hidden>
+      <h3>Your account</h3>
+      <p class="sub" id="accountNote" style="margin-top:6px"></p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary small" id="signInBtn" hidden>Sign in with Google</button>
+        <button class="btn ghost small" id="signOutBtn" hidden>Sign out</button>
+      </div>
+    </div>
     <div class="card flat">
       <h3>Saving</h3>
       <p class="sub" id="syncExplain" style="margin-top:6px"></p>
@@ -611,25 +619,149 @@ async function dropItem(kind,id){
   saveLocalAll();renderAll();
 }
 
-async function initStore(){
-  let u=null,d=null;
-  try{ if(window.claude&&claude.use){ [u,d]=await Promise.all([claude.use('user'),claude.use('db')]); } }catch(e){}
-  if(u&&d){ try{uid=await u.id();}catch(e){uid=null;} if(uid){db=d;cloud=true;} }
-  if(!cloud){
-    const saved=lsGet(LS,null);
-    if(saved&&saved.profile){S={profile:migrate(Object.assign(defaultProfile(),saved.profile)),links:saved.links||[],exams:saved.exams||[],topics:saved.topics||[]};}
-    boot();
-    return;
+/* ---------- sync through a Firebase project (the hosted copy only) ----------
+   window.STUDYDEN_FIREBASE comes from firebase-config.js, which build-site.py
+   loads into the hosted page. Inside a Claude artifact the account store is
+   already there, so none of this runs. */
+const FBCFG=(!window.claude&&window.STUDYDEN_FIREBASE&&window.STUDYDEN_FIREBASE.apiKey)?window.STUDYDEN_FIREBASE:null;
+const FBVER='12.6.0';
+let fb=null,fbReady=null,fbUser=null;
+
+async function fbLoad(){
+  if(fb)return fb;
+  const base='https://www.gstatic.com/firebasejs/'+FBVER+'/';
+  const [appM,authM,fsM]=await Promise.all([
+    import(base+'firebase-app.js'),
+    import(base+'firebase-auth.js'),
+    import(base+'firebase-firestore.js')]);
+  const app=appM.initializeApp(FBCFG);
+  const auth=authM.getAuth(app);
+  try{await authM.setPersistence(auth,authM.browserLocalPersistence);}catch(e){}
+  fb={app,auth,db:fsM.getFirestore(app),A:authM,F:fsM};
+  return fb;
+}
+
+/* the same shape the artifact store has, so the app sees no difference */
+function fbRefs(uid){
+  const F=fb.F,db=fb.db;
+  const mkCol=path=>({
+    add:data=>F.addDoc(F.collection(db,path),data),
+    doc:id=>mkDoc(path+'/'+id),
+    onSnapshot:(cb,err)=>F.onSnapshot(F.collection(db,path),
+      q=>cb({docs:q.docs.map(d=>({id:d.id,data:()=>d.data()}))}),err)
+  });
+  const mkDoc=path=>({
+    path,
+    set:body=>F.setDoc(F.doc(db,path),body),
+    update:patch=>F.updateDoc(F.doc(db,path),patch),
+    delete:()=>F.deleteDoc(F.doc(db,path)),
+    collection:name=>mkCol(path+'/'+name),
+    onSnapshot:(cb,err)=>F.onSnapshot(F.doc(db,path),
+      s=>cb({exists:s.exists(),data:()=>s.data(),metadata:s.metadata}),err)
+  });
+  return mkDoc('users/'+uid+'/den/profile');
+}
+
+function fbWaitForUser(){
+  if(fbReady)return fbReady;
+  fbReady=(async()=>{
+    try{
+      const f=await fbLoad();
+      return await new Promise(res=>{
+        let settled=false;
+        const t=setTimeout(()=>{if(!settled){settled=true;res(null);}},9000);
+        f.A.onAuthStateChanged(f.auth,u=>{
+          fbUser=u||null;
+          renderAccount();
+          if(!settled){settled=true;clearTimeout(t);res(fbUser);}
+          else if(fbUser&&!cloud)fbAdopt(fbUser);
+          else if(!fbUser&&cloud)location.reload();
+        });
+      });
+    }catch(e){return null;}
+  })();
+  return fbReady;
+}
+
+function renderAccount(){
+  const card=$('#accountCard');
+  if(!card)return;
+  if(!FBCFG){card.hidden=true;return;}
+  card.hidden=false;
+  $('#signInBtn').hidden=!!fbUser;
+  $('#signOutBtn').hidden=!fbUser;
+  $('#accountNote').textContent=fbUser
+    ?('Signed in as '+(fbUser.email||fbUser.displayName||'your account')+'. This den follows you to any device you sign in on.')
+    :'Sign in with Google and your den is kept in your account, so the same progress shows up on your phone, your laptop, anywhere.';
+}
+
+async function fbSignIn(){
+  try{
+    const f=await fbLoad();
+    const prov=new f.A.GoogleAuthProvider();
+    try{await f.A.signInWithPopup(f.auth,prov);}
+    catch(err){
+      const c=(err&&err.code)||'';
+      if(/popup-blocked|popup-closed|cancelled-popup|operation-not-supported/.test(c))
+        await f.A.signInWithRedirect(f.auth,prov);
+      else throw err;
+    }
+  }catch(e){showToast('Sign-in did not go through.');}
+}
+
+async function fbSignOutNow(){
+  try{const f=await fbLoad();await f.A.signOut(f.auth);}catch(e){}
+  location.reload();
+}
+
+/* what to do when someone signs in on a device that already has a den */
+async function fbAdopt(user){
+  try{
+    const f=await fbLoad();
+    const ref=F_doc(user.uid);
+    const snap=await f.F.getDoc(ref);
+    const local=S.profile.xp>0||S.profile.streak>0||S.links.length||S.exams.length||S.topics.length;
+    if(!snap.exists()){await fbUpload(user.uid);fbTakeOver(user);return;}
+    if(!local){fbTakeOver(user);return;}
+    openModal('<h3>Two dens</h3><p class="sub">This device has progress of its own, and your account already holds a den. Only one can continue.</p>',
+      [{label:'Keep my account\u2019s den',primary:true,onClick:()=>fbTakeOver(user)},
+       {label:'Upload this device',onClick:()=>{fbUpload(user.uid).then(()=>fbTakeOver(user));}}]);
+  }catch(e){showToast('Could not reach your account just now.');}
+}
+function F_doc(uid){return fb.F.doc(fb.db,'users/'+uid+'/den/profile');}
+
+async function fbUpload(uid){
+  const f=await fbLoad();
+  await f.F.setDoc(F_doc(uid),JSON.parse(JSON.stringify(S.profile)));
+  for(const kind of ['links','exams','topics']){
+    const col=f.F.collection(f.db,'users/'+uid+'/den/profile/'+kind);
+    const existing=await f.F.getDocs(col);
+    for(const d of existing.docs){try{await f.F.deleteDoc(d.ref);}catch(e){}}
+    for(const it of S[kind]){
+      const body=Object.assign({},it);delete body.id;
+      try{await f.F.addDoc(col,body);}catch(e){}
+    }
   }
-  refProfile=db.doc('data/users/'+uid+'/profile');
+}
+
+function fbTakeOver(user){
+  uid=user.uid;
+  refProfile=fbRefs(uid);
   refs.links=refProfile.collection('links');
   refs.exams=refProfile.collection('exams');
   refs.topics=refProfile.collection('topics');
+  cloud=true;
+  renderAccount();
+  wireCloud();
+  showToast('Synced to your account.');
+}
+
+function wireCloud(){
   loadTimer=setTimeout(()=>{
     if(!booted)$('#syncNote').innerHTML='<div class="pill-note">Still reaching your saved progress. Anything you do now may not stick until it answers.</div>';
   },10000);
   refProfile.onSnapshot(snap=>{
-    if(!snap.metadata.fromCache){clearTimeout(loadTimer);if(!/could not be saved/.test($('#syncNote').innerHTML))$('#syncNote').innerHTML='';}
+    if(!snap.metadata||!snap.metadata.fromCache){clearTimeout(loadTimer);if(!/could not be saved/.test($('#syncNote').innerHTML))$('#syncNote').innerHTML='';}
     if(snap.exists)S.profile=migrate(Object.assign(defaultProfile(),snap.data()));
     if(!booted){boot(!snap.exists);}else{renderAll();}
   },e=>{clearTimeout(loadTimer);
@@ -639,6 +771,40 @@ async function initStore(){
   ['links','exams','topics'].forEach(k=>{
     refs[k].onSnapshot(q=>{S[k]=q.docs.map(x=>Object.assign({id:x.id},x.data()));if(booted)renderAll();},()=>{});
   });
+}
+
+async function initStore(){
+  let u=null,d=null;
+  try{ if(window.claude&&claude.use){ [u,d]=await Promise.all([claude.use('user'),claude.use('db')]); } }catch(e){}
+  if(u&&d){ try{uid=await u.id();}catch(e){uid=null;} if(uid){db=d;cloud=true;} }
+
+  if(!cloud&&FBCFG){
+    const user=await fbWaitForUser();
+    if(user){
+      uid=user.uid;
+      refProfile=fbRefs(uid);
+      refs.links=refProfile.collection('links');
+      refs.exams=refProfile.collection('exams');
+      refs.topics=refProfile.collection('topics');
+      cloud=true;
+    }
+  }
+
+  if(!cloud){
+    const saved=lsGet(LS,null);
+    if(saved&&saved.profile){S={profile:migrate(Object.assign(defaultProfile(),saved.profile)),links:saved.links||[],exams:saved.exams||[],topics:saved.topics||[]};}
+    boot();
+    renderAccount();
+    return;
+  }
+  if(db&&!refProfile){
+    refProfile=db.doc('data/users/'+uid+'/profile');
+    refs.links=refProfile.collection('links');
+    refs.exams=refProfile.collection('exams');
+    refs.topics=refProfile.collection('topics');
+  }
+  renderAccount();
+  wireCloud();
 }
 
 /* ---------- boot + absence ---------- */
@@ -957,6 +1123,7 @@ function renderWorld(){
     ?'Signed in, so your den lives with your account. Open this same link on your phone, tablet or another computer and your level, streak, links, plan and exams are all there.'
     :'This view cannot reach your account, so progress is being kept in this browser only. Open the published link while signed in to sync it across your devices.';
   $('#footNote').textContent=cloud?'Saved to your account':'Saved on this device only';
+  renderAccount();
 }
 function renderFocusNote(){
   const r=todayRec();
@@ -1113,6 +1280,8 @@ function renameCritter(){
     inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$$('[data-act]')[0].click();}});}
 }
 $('#avatarBtn').addEventListener('click',()=>setTab('world'));
+$('#signInBtn').addEventListener('click',fbSignIn);
+$('#signOutBtn').addEventListener('click',fbSignOutNow);
 $('#renameBtn').addEventListener('click',renameCritter);
 $('#checkinBtn').addEventListener('click',doCheckin);
 $('#buyShield').addEventListener('click',()=>{
