@@ -11,7 +11,7 @@ import io, os, json, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'study-den.html')
-SITE = HERE   # the repo root is the site: gyj-aqua.github.io serves it
+SITE = HERE   # GitHub Pages serves this repository from its root
 
 body = io.open(SRC, encoding='utf-8').read()
 

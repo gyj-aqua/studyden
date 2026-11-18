@@ -6,7 +6,7 @@ that levels up when you show up (and sulks when you don't).
 
 | | |
 |---|---|
-| **Live site** | https://gyj-aqua.github.io |
+| **Live site** | https://gyj-aqua.github.io/studyden/ |
 | **Claude artifact** | https://claude.ai/artifact/2L4tdwyy9iDsJYFwWitUdP |
 
 Two copies, same app:
@@ -21,8 +21,9 @@ in the World tab.
 
 ## Layout
 
-The repository root *is* the site — GitHub Pages serves a `<user>.github.io`
-repo straight from the default branch, so `index.html` lives here.
+GitHub Pages serves this repository from the root of `main`, so `index.html`
+lives here beside the source. Every path in the page is relative, so the site
+works whether it is served from a root domain or from a `/studyden/` prefix.
 
 | file | what it is |
 |---|---|
