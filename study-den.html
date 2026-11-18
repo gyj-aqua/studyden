@@ -15,15 +15,15 @@
   --bg:#f5f6f8; --bg2:#eef0f3; --surface:#fff; --surface2:#f1f4f7; --line:#dde3ea;
   --ink:#1b2027; --muted:#626b78; --accent:#0d85a0; --accent-ink:#fff; --accent2:#e0714c; --glow:#e4f2f6;
 }
-:root[data-world="ocean"]{
+:root[data-den-world="ocean"]{
   --bg:#f5f7f8; --bg2:#eef1f3; --surface:#fff; --surface2:#f0f5f7; --line:#dce5e9;
   --ink:#1b2027; --muted:#616c75; --accent:#0d85a0; --accent-ink:#fff; --accent2:#e0714c; --glow:#e4f2f6;
 }
-:root[data-world="snow"]{
+:root[data-den-world="snow"]{
   --bg:#f5f6f9; --bg2:#eef0f5; --surface:#fff; --surface2:#f1f3f9; --line:#dee2ed;
   --ink:#1a1f2b; --muted:#616a7d; --accent:#4867c9; --accent-ink:#fff; --accent2:#d2608a; --glow:#e8ecfa;
 }
-:root[data-world="space"]{
+:root[data-den-world="space"]{
   --bg:#f6f5f9; --bg2:#f0eef5; --surface:#fff; --surface2:#f4f1f9; --line:#e3deec;
   --ink:#1f1b28; --muted:#67607a; --accent:#6a45cf; --accent-ink:#fff; --accent2:#cf8a16; --glow:#eee9f8;
 }
@@ -36,10 +36,10 @@
     --bg:#14171c; --bg2:#1a1e24; --surface:#1c2027; --surface2:#242931; --line:#343a44;
     --ink:#e9edf2; --muted:#98a2b0; --accent:#33c3db; --accent-ink:#0f1317; --accent2:#f0906a; --glow:#1e2d33;
   }
-  :root:not([data-theme="light"])[data-world="snow"]{
+  :root:not([data-theme="light"])[data-den-world="snow"]{
     --accent:#8aabff; --accent-ink:#121722; --accent2:#f58fb4; --glow:#1f2634;
   }
-  :root:not([data-theme="light"])[data-world="space"]{
+  :root:not([data-theme="light"])[data-den-world="space"]{
     --accent:#a888ff; --accent-ink:#161222; --accent2:#f5c45c; --glow:#262033;
   }
 }
@@ -51,10 +51,10 @@
   --bg:#14171c; --bg2:#1a1e24; --surface:#1c2027; --surface2:#242931; --line:#343a44;
   --ink:#e9edf2; --muted:#98a2b0; --accent:#33c3db; --accent-ink:#0f1317; --accent2:#f0906a; --glow:#1e2d33;
 }
-:root[data-theme="dark"][data-world="snow"]{
+:root[data-theme="dark"][data-den-world="snow"]{
   --accent:#8aabff; --accent-ink:#121722; --accent2:#f58fb4; --glow:#1f2634;
 }
-:root[data-theme="dark"][data-world="space"]{
+:root[data-theme="dark"][data-den-world="space"]{
   --accent:#a888ff; --accent-ink:#161222; --accent2:#f5c45c; --glow:#262033;
 }
 html,body{min-height:100%}
@@ -229,7 +229,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding-block:8px 2
 </style>
 <script>
 try{var w0=JSON.parse(localStorage.getItem("studyden.world")||'"ocean"');}catch(e){var w0="ocean";}
-document.documentElement.dataset.world=(w0==="snow"||w0==="space")?w0:"ocean";
+document.documentElement.dataset.denWorld=(w0==="snow"||w0==="space")?w0:"ocean";
 </script>
 
 <div id="ambient" aria-hidden="true"></div>
@@ -635,7 +635,7 @@ function boot(isNew){
   if(p.lastSeen&&dayDiff(p.lastSeen,today)>=2)report=applyAbsence(p,today);
   p.lastSeen=today;
   pruneDays(p);
-  document.documentElement.dataset.world=p.world;
+  document.documentElement.dataset.denWorld=p.world;
   saveProfile();
   buildAmbient();renderAll();
   if(report)welcomeBack(report);
@@ -794,7 +794,7 @@ function buildAmbient(){
 
 /* ---------- render ---------- */
 function renderAll(){
-  document.documentElement.dataset.world=S.profile.world;
+  document.documentElement.dataset.denWorld=S.profile.world;
   renderHeader();renderDen();renderLinks();renderPlan();renderExams();renderWorld();renderFocusNote();
 }
 function renderHeader(){
@@ -1049,7 +1049,7 @@ $('#examForm').addEventListener('submit',async e=>{
 /* ---------- delegated clicks ---------- */
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-toggle],[data-drop-topic],[data-drop-link],[data-drop-exam],[data-world],[data-critter],[data-visit]');
-  if(!t)return;
+  if(!t||t===document.documentElement||t===document.body)return;
   if(t.dataset.toggle){toggleTopic(t.dataset.toggle);return;}
   if(t.dataset.dropTopic){const it=S.topics.find(x=>x.id===t.dataset.dropTopic);dropItem('topics',t.dataset.dropTopic);showToast('Removed “'+(it?it.text:'topic')+'”.');return;}
   if(t.dataset.dropLink){const it=S.links.find(x=>x.id===t.dataset.dropLink);confirmDrop(it?it.name:'This link',()=>dropItem('links',t.dataset.dropLink));return;}
@@ -1065,7 +1065,7 @@ function pickWorld(k){
   const here=CRITTERS.filter(c=>c.world===k),owned=p.owned||[];
   if(!here.some(c=>c.id===p.critter))p.critter=(here.find(c=>owned.includes(c.id))||here[0]).id;
   if(!owned.includes(p.critter))p.owned=[...owned,p.critter];
-  document.documentElement.dataset.world=k;
+  document.documentElement.dataset.denWorld=k;
   buildAmbient();saveProfile();renderAll();
   showToast('Welcome to '+WORLDS[k].name+'.');
 }
@@ -1167,7 +1167,7 @@ $('#restoreFile').addEventListener('change',e=>{
            exams:Array.isArray(d.exams)?d.exams:[],topics:Array.isArray(d.topics)?d.topics:[]};
         saveLocalAll();saveProfile();showToast('Den restored.');
       }
-      document.documentElement.dataset.world=S.profile.world;
+      document.documentElement.dataset.denWorld=S.profile.world;
       buildAmbient();renderAll();setTab('den');
     }catch(err){showToast('That file is not a Study Den backup.');}
   };
@@ -1188,7 +1188,7 @@ function start(restored){
   else lsSet('studyden.timer',null);
   paintTimer();
   const w=lsGet('studyden.world',null);
-  if(w&&WORLDS[w]){S.profile.world=w;document.documentElement.dataset.world=w;}
+  if(w&&WORLDS[w]){S.profile.world=w;document.documentElement.dataset.denWorld=w;}
   const c=lsGet('studyden.critter',null);
   if(c&&critterById(c).id===c)S.profile.critter=c;
   buildAmbient();renderAll();
