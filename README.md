@@ -1,12 +1,12 @@
 # Study Den
 
 A gamified study hub: a launchpad for the sites and artifacts you study from,
-exam countdowns, a study plan, a focus timer, and a companion that levels up
-when you show up (and sulks when you don't).
+exam countdowns, a study plan, a focus timer, and one of eighteen companions
+that levels up when you show up (and sulks when you don't).
 
 | | |
 |---|---|
-| **Live site** | https://gyj-aqua.github.io/study-den/ |
+| **Live site** | https://gyj-aqua.github.io |
 | **Claude artifact** | https://claude.ai/artifact/2L4tdwyy9iDsJYFwWitUdP |
 
 Two copies, same app:
@@ -19,15 +19,24 @@ Two copies, same app:
 Move progress between them with **Download backup** / **Restore from a backup**
 in the World tab.
 
+## Layout
+
+The repository root *is* the site — GitHub Pages serves a `<user>.github.io`
+repo straight from the default branch, so `index.html` lives here.
+
+| file | what it is |
+|---|---|
+| `study-den.html` | the source: the artifact body, with no document skeleton (claude.ai adds one at publish time) |
+| `index.html` | the hosted copy — the source wrapped in that skeleton, plus the manifest, icons and service worker |
+| `study-den-offline.html` | the same app as one self-contained file you can open straight from disk |
+| `sw.js` | caches the app so it opens with no connection; network first, so it refreshes as soon as you are online |
+| `build-site.py` | rebuilds `index.html` and `study-den-offline.html` from the source |
+| `make-icon.py` | redraws the app icon (Mochi the otter) at 512 / 192 / 180 px |
+
 ## Building
 
-`study-den.html` is the source — it is the artifact body, with no document
-skeleton (claude.ai adds one at publish time).
+Edit `study-den.html`, then:
 
 ```sh
-python3 -I make-icon.py    # redraw the app icons
-python3 -I build-site.py   # -> docs/ (hosted copy) and study-den-offline.html
+python3 -I build-site.py
 ```
-
-`docs/` is what GitHub Pages serves. `study-den-offline.html` is the same app
-as a single self-contained file you can open straight from disk.

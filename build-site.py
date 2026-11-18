@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Builds the two copies of Study Den that run outside Claude.
 
-  site/index.html          the hosted copy: installable, works offline
+  index.html               the hosted copy: installable, works offline
   study-den-offline.html   one self-contained file to open from disk
 
 Both wrap study-den.html (the artifact source) in the document skeleton the
@@ -11,8 +11,7 @@ import io, os, json, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'study-den.html')
-SITE = os.path.join(HERE, 'docs')
-os.path.isdir(SITE) or os.makedirs(SITE)
+SITE = HERE   # the repo root is the site: gyj-aqua.github.io serves it
 
 body = io.open(SRC, encoding='utf-8').read()
 
@@ -120,5 +119,5 @@ io.open(os.path.join(SITE, 'sw.js'), 'w', encoding='utf-8').write(SW.replace('__
 
 io.open(os.path.join(SITE, '.nojekyll'), 'w', encoding='utf-8').write('')
 
-for f in sorted(os.listdir(SITE)):
-    print('%-24s %8d' % (f, os.path.getsize(os.path.join(SITE, f))))
+for f in ('index.html', 'manifest.webmanifest', 'sw.js', 'study-den-offline.html'):
+    print('%-24s %8d' % (f, os.path.getsize(os.path.join(HERE, f))))

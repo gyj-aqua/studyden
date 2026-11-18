@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw
 import os
 
 S = 4096                      # supersample canvas
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'docs')
+OUT = os.path.dirname(os.path.abspath(__file__))
 
 TEAL   = (13, 133, 160)
 TEAL_L = (31, 160, 186)
@@ -77,7 +77,8 @@ for sy, dy in ((60.5, -1.6), (63.5, 1.6)):
     d.line([64 * u, sy * u, 75 * u, (sy + dy) * u], fill=FUR_D, width=int(1.2 * u))
 
 base = img.resize((1024, 1024), Image.LANCZOS)
-base.save(os.path.join(OUT, 'icon-512.png'))          # 1024 source, named by use
+written = []
 for name, px in (('icon-512.png', 512), ('icon-192.png', 192), ('apple-touch-icon.png', 180)):
     base.resize((px, px), Image.LANCZOS).save(os.path.join(OUT, name))
-print('icons written:', ', '.join(sorted(os.listdir(OUT))))
+    written.append(name)
+print('icons written:', ', '.join(written))
