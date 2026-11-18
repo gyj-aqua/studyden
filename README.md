@@ -32,7 +32,9 @@ works whether it is served from a root domain or from a `/studyden/` prefix.
 | `study-den-offline.html` | the same app as one self-contained file you can open straight from disk |
 | `sw.js` | caches the app so it opens with no connection; network first, so it refreshes as soon as you are online |
 | `build-site.py` | rebuilds `index.html` and `study-den-offline.html` from the source |
-| `make-icon.py` | redraws the app icon (Mochi the otter) at 512 / 192 / 180 px |
+| `art/` | the eighteen companions, cut out of the reference sheets as transparent PNGs — the source of truth for the artwork |
+| `inline-art.py` | rebuilds the `ART` block in `study-den.html` from `art/`, so the images travel inside the page |
+| `make-icon.py` | builds the app icon from `art/mochi.png` at 512 / 192 / 180 px |
 
 ## Building
 
@@ -40,4 +42,10 @@ Edit `study-den.html`, then:
 
 ```sh
 python3 -I build-site.py
+```
+
+After changing anything in `art/`:
+
+```sh
+python3 -I inline-art.py && python3 -I make-icon.py && python3 -I build-site.py
 ```
