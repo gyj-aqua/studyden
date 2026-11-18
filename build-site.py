@@ -100,8 +100,14 @@ self.addEventListener('activate', function(e){
 
 self.addEventListener('fetch', function(e){
   if(e.request.method !== 'GET') return;
+  /* The page itself is always revalidated against the server, so an update
+     shows up on the next open instead of waiting out the CDN cache. The
+     server answers 304 when nothing changed, so this costs almost nothing. */
+  var req = e.request.mode === 'navigate'
+    ? new Request(e.request.url, {cache: 'no-cache', credentials: 'same-origin'})
+    : e.request;
   e.respondWith(
-    fetch(e.request).then(function(res){
+    fetch(req).then(function(res){
       var copy = res.clone();
       caches.open(CACHE).then(function(c){ c.put(e.request, copy); }).catch(function(){});
       return res;
