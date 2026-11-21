@@ -9,10 +9,10 @@
  * account read and write only its own document.
  */
 window.STUDYDEN_FIREBASE = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyAfwmUHmuHVu3TPO-AIMr4fRkMmefgKZk8",
+  authDomain: "study-den-67c42.firebaseapp.com",
+  projectId: "study-den-67c42",
+  storageBucket: "study-den-67c42.firebasestorage.app",
+  messagingSenderId: "370889052878",
+  appId: "1:370889052878:web:f3871f2b3d9d2fb4dcf69f"
 };
